@@ -261,7 +261,13 @@ class SAM3Segment:
         processor, torch_device = self._load_processor(device)
         autocast_device = comfy.model_management.get_autocast_device(torch_device)
         autocast_enabled = torch_device.type == "cuda" and not comfy.model_management.is_device_mps(torch_device)
-        ctx = torch.autocast(autocast_device, dtype=torch.bfloat16) if autocast_enabled else nullcontext()
+        if autocast_enabled:
+            supported_dtype = torch.float32
+            if torch.cuda.is_bf16_supported(including_emulation=False):
+                supported_dtype = torch.bfloat16
+            ctx = torch.autocast(autocast_device, dtype=supported_dtype)
+        else:
+            ctx = nullcontext()
         result_images, result_masks, result_mask_images = [], [], []
         with ctx:
             for tensor_img in image:
